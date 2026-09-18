@@ -1,0 +1,12 @@
+{
+  "router_host": "192.168.88.1",
+  "router_port": 8729,
+  "tls_server_name": "router-test.local",
+  "ca_file": "router-ca.crt",
+  "router_username": "isp-monitor",
+  "router_password": "REPLACE_LOCALLY",
+  "app_url": "https://YOUR-APP.vercel.app",
+  "connector_token": "REPLACE_WITH_GENERATED_TOKEN",
+  "interval_seconds": 60,
+  "enable_writes": true
+}

@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.vercel/
+*.tsbuildinfo
+test-results/
+connector/config.json
+connector/*.key
+connector/*.pem
+connector/*.crt
+__pycache__/
+connector/*.result.json
+connector/*.result.tmp
+connector/*.lock
