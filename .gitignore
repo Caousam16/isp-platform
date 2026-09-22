@@ -13,3 +13,6 @@ __pycache__/
 connector/*.result.json
 connector/*.result.tmp
 connector/*.lock
+
+.vercel
+.env*
