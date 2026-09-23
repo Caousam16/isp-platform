@@ -141,14 +141,6 @@ def apply_job(api, job, checkpoint):
         actual_before = read()
 
         if actual_before != before:
-            print(
-                "Bandwidth precondition mismatch:",
-                {
-                    "expected": before,
-                    "actual": actual_before,
-                },
-                flush=True,
-            )
             raise ValueError("Queue settings changed since snapshot")
 
         # Save uncertain state BEFORE issuing the RouterOS write.
@@ -160,16 +152,6 @@ def apply_job(api, job, checkpoint):
 
         writing = True
 
-        print(
-            "Applying bandwidth:",
-            {
-                "queue": identity["name"],
-                "id": identity["id"],
-                "target": identity["target"],
-                "desired": job["desired"],
-            },
-            flush=True,
-        )
 
         api.command(
             "/queue/simple/set",
@@ -187,28 +169,12 @@ def apply_job(api, job, checkpoint):
 
         actual_after = read()
 
-        print(
-            "Bandwidth read-back:",
-            {
-                "desired": desired,
-                "actual": actual_after,
-            },
-            flush=True,
-        )
 
         if actual_after != desired:
-            print(
-                "Bandwidth verification mismatch:",
-                {
-                    "desired": desired,
-                    "actual": actual_after,
-                },
-                flush=True,
-            )
 
             outcome.update(
                 status="uncertain",
-                code="readback_mismatch",
+                code="write_outcome_unknown",
             )
 
             return outcome
@@ -222,7 +188,6 @@ def apply_job(api, job, checkpoint):
         print(
             "Bandwidth command exception:",
             type(exc).__name__,
-            str(exc),
             flush=True,
         )
 
@@ -243,7 +208,7 @@ def apply_job(api, job, checkpoint):
 def save_result(path, result):
     path = Path(path)
     temporary = path.with_suffix(".tmp")
-    with temporary.open("w", encoding="utf-8") as stream:
+    with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as stream:
         json.dump(result, stream)
         stream.flush()
         os.fsync(stream.fileno())
@@ -254,12 +219,15 @@ def process_one(config, api_factory, post, state_path):
     state_path = Path(state_path)
     # An unacknowledged result is retried, never its router command.
     if state_path.exists():
-        post(config, "commands", json.loads(state_path.read_text(encoding="utf-8")))
+        saved = json.loads(state_path.read_text(encoding="utf-8"))
+        if saved.get("code") == "readback_mismatch":
+            saved["code"] = "write_outcome_unknown"
+        post(config, "commands", saved)
         state_path.unlink()
-        return
+        return False
     job = post(config, "commands", {"action": "claim"}).get("job")
     if not job:
-        return
+        return False
     initial = {"action": "result", "id": job["id"], "lease": job["lease"], "status": "uncertain", "code": "interrupted"}
     save_result(state_path, initial)
     try:
@@ -272,6 +240,7 @@ def process_one(config, api_factory, post, state_path):
     post(config, "commands", result)
     state_path.unlink()
     print("Bandwidth command: " + result["status"], flush=True)
+    return True
 
 
 def lock_writer(path):

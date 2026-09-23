@@ -16,3 +16,8 @@ connector/*.lock
 
 .vercel
 .env*
+
+supabase/.temp/
+connector/config.*.json
+!connector/config.example.json
+!connector/config.production.example.json

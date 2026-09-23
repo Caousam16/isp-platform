@@ -1,16 +1,18 @@
 # SOUTHWOODS CABLE and Internet — ISP Platform
 
+Start with [DEPLOYMENT.md](DEPLOYMENT.md) for this replacement release. See [RELEASE-NOTES.md](RELEASE-NOTES.md) for changes, test evidence and remaining staging checks.
+
 ## MikroTik local-router testing
 
 The API-SSL connector supports a local RouterOS 6.49.19 router with
 this app on Vercel. See [MIKROTIK-SETUP.md](MIKROTIK-SETUP.md) for setup and testing.
 The admin queue inventory is at `/admin/routers`. Optional simple-queue
 plan-based bandwidth and service suspension controls are documented in [MIKROTIK-WRITES.md](MIKROTIK-WRITES.md).
-Subscriber service actions remain database-only.
+Mapped service changes now queue router intent in the same database transaction. Unmapped services remain database-only.
 
 Next.js 16 + React 19 + TypeScript + Supabase, ready to import into Vercel.
 
-This is the **v0.1 project foundation**, not the complete production MVP from the architecture roadmap. It is connected to a free-tier development Supabase project. The first verified Auth user is provisioned as the active administrator for SOUTHWOODS CABLE and Internet. No Vercel project or production database has been created.
+This is a hardening release of the existing application. See [DEPLOYMENT.md](DEPLOYMENT.md) for the mandatory database upgrade, three-router configuration, staging checks and deployment order. Live production credentials, database and routers were not accessed while preparing this release.
 
 ### Company coverage and shared sign-in
 
@@ -35,7 +37,7 @@ use the existing shared sign-in routes; they do not need separate company URLs.
 
 ## Run locally
 
-Use Node.js 22 or newer and npm.
+Use Node.js 24.14 or later in the Node 24 release line and npm.
 
 ```sh
 npm ci
@@ -69,16 +71,16 @@ npm start
 | Credential provisioning                          | Not available                        | Admin creates staff; staff/admin create subscribers |
 | Subscriber password reset                        | Not available                        | Staff/admin reset linked subscriber credentials   |
 | Assign subscriber plans                          | In-memory pending assignment          | Staff/admin insert through RLS as pending           |
-| Service lifecycle                                | In-memory state changes               | Staff/admin activate, suspend, reconnect, terminate, and change plan |
+| Service lifecycle                                | In-memory state changes               | Staff suspend; admins activate, suspend, reconnect, terminate and change plan |
 | Audit log                                         | Sample/session events                | Immutable subscriber, plan, and service lifecycle events |
 
 The root redirects to `/workspace` when Supabase variables are present. Live requests never fall back to sample records on errors. `/demo` remains a separate public sample workspace, including after configuration.
 
 ## Configure Supabase
 
-1. The current development project is `isp-platform-dev` on Supabase's free plan. Do not treat it as production.
-2. Its schema matches the SQL files in `supabase/migrations/`. Apply those files in order only when setting up another empty project.
-3. `.env.local` is configured for this development project and is intentionally excluded from the archive and source control. For a new checkout, copy `.env.example` to `.env.local` and set the project's URL and **publishable key**.
+1. Use your intended Supabase project; do not assume an existing development project is production.
+2. Follow the existing-database or empty-project migration path in DEPLOYMENT.md.
+3. `.env.local` is intentionally excluded from the archive and source control. For a new checkout, copy `.env.example` to `.env.local` and set the project's URL and **publishable key**.
 4. Add the project's `SUPABASE_SECRET_KEY` to `.env.local` and to the Vercel server environment to enable credential provisioning. A legacy `SUPABASE_SERVICE_ROLE_KEY` is also accepted. Never use a `NEXT_PUBLIC_` prefix for either privileged key.
 5. In Auth settings, disable public signups, keep email/password enabled, configure a trusted site URL and exact redirect allowlist, and review Auth rate limits. There is no forgotten-password email recovery flow yet.
 6. Bootstrap the first administrator as described below. Do not commit passwords, privileged keys, or actual user IDs into seed files.
@@ -232,7 +234,7 @@ Creation-environment checks: TypeScript and all local tests succeeded. The sandb
 - Invoice line items, taxes, validated imports, reversals/credit notes, partial allocation across multiple invoices, and jurisdictional PDF approval
 - Recurring billing, notification outbox, transactional email and scheduled jobs
 - Storage buckets, document uploads, upload validation and retention
-- Pagination and server-side search; current workspace loads at most 500 subscribers/services/invoices and 100 plans
+- Server-side search/reporting for long billing histories; this release reads complete collections in pages, bounded at 50,000 rows each, and renders 100 rows per table page
 - Full permission catalog, custom roles, scoped exports and all sensitive-action audit events
 - Cross-device/browser tests, real Auth integration tests, security review, backups and restore rehearsal
 - Tickets, dispatch, payment gateways, network provisioning and telemetry (later phases)

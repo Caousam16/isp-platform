@@ -1,5 +1,9 @@
+-- Compatibility guard for overlapping historical migrations.
+do $compatibility$
+begin
+if to_regclass('public.organizations') is null then
 -- Apply to an empty Supabase project. No real customer fixtures or credentials.
-begin;
+
 create schema if not exists app_private;
 revoke all on schema app_private from public;
 grant usage on schema app_private to authenticated;
@@ -171,5 +175,6 @@ create index on public.subscriber_services(plan_id);
 create index on public.invoices(organization_id, due_on);
 create index on public.payment_allocations(invoice_id);
 create index on public.audit_events(organization_id, created_at desc);
-commit;
-;
+end if;
+end;
+$compatibility$;

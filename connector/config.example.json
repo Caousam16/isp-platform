@@ -7,6 +7,7 @@
   "router_password": "REPLACE_LOCALLY",
   "app_url": "https://YOUR-APP.vercel.app",
   "connector_token": "REPLACE_WITH_GENERATED_TOKEN",
-  "interval_seconds": 60,
-  "enable_writes": true
+  "interval_seconds": 120,
+  "enable_writes": false,
+  "command_interval_seconds": 10
 }

@@ -86,7 +86,7 @@ class ConnectorTest(unittest.TestCase):
                         api = API(sock)
                         replies = [sentence("!done"), sentence("!re", "=name=Lab") + sentence("!done"),
                             sentence("!re", "=version=6.49.19", "=uptime=1d") + sentence("!done"),
-                            sentence("!re", "=.id=*1", "=name=Subscriber", "=target=10.0.0.2/32", "=max-limit=10M/20M", "=disabled=false") + sentence("!done"), sentence("!done")]
+                            sentence("!re", "=.id=*1", "=name=Subscriber", "=target=10.0.0.2/32", "=max-limit=10M/20M", "=disabled=false") + sentence("!done"), sentence("!done"), sentence("!done")]
                         for reply in replies:
                             commands.append(api.sentence())
                             sock.sendall(reply)
@@ -104,7 +104,7 @@ class ConnectorTest(unittest.TestCase):
             self.assertEqual(errors, [])
             self.assertEqual(result["version"], "6.49.19")
             self.assertEqual(result["queues"][0]["maxLimit"], "10M/20M")
-            self.assertEqual([c[0] for c in commands], ["/login", "/system/identity/print", "/system/resource/print", "/queue/simple/print", "/queue/tree/print"])
+            self.assertEqual([c[0] for c in commands], ["/login", "/system/identity/print", "/system/resource/print", "/queue/simple/print", "/queue/tree/print", "/ip/dhcp-server/lease/print"])
 
     def test_config_rejects_http(self):
         with tempfile.TemporaryDirectory() as directory:

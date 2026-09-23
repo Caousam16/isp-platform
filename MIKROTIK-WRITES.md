@@ -1,3 +1,5 @@
+> Production hardening release: follow [DEPLOYMENT.md](DEPLOYMENT.md) first for migration order, three-router scoping, 120-second snapshots, six-minute freshness and command recovery. The single-router examples below remain useful for API-SSL setup.
+
 # Subscriber service and MikroTik queue synchronization
 
 The app uses an explicitly linked static simple queue for each subscriber. RouterOS rate pairs are **upload/download** from the target's perspective. Admins confirm a subscriber's /32 IP and link the queue in `/admin/routers`. A plan name cannot identify a subscriber's device; the three queues on your test router can serve only three uniquely mapped subscriber IPs.

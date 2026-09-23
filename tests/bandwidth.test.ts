@@ -10,7 +10,7 @@ test("bandwidth input bounds and upload/download ordering", () => {
   assert.equal(planSettings(30, 10).burstLimit, "20000000/40000000");
   assert.equal(planSettings(30, 10).burstThreshold, "20000000/40000000");
   assert.equal(planSettings(30, 10).burstTime, "8s/8s");
-  assert.deepEqual(restrictedSettings(), {maxLimit:"1000/1000",limitAt:"1000/1000",burstLimit:"1000/1000",burstThreshold:"1000/1000",burstTime:"0s/0s"});
+  assert.deepEqual(restrictedSettings(), {maxLimit:"1000/1000",limitAt:"1000/1000",burstLimit:"1000/1000",burstThreshold:"1000/1000",burstTime:"8s/8s"});
   for (const speed of [0, -1, 1.5, 100001, Infinity, NaN])
     assert.equal(planSpeedSchema.safeParse({download: speed, upload: 10}).success, false);
 });

@@ -1,5 +1,7 @@
-begin;
-
+-- Compatibility guard for overlapping historical migrations.
+do $compatibility$
+begin
+if to_regclass('app_private.document_sequences') is null then
 alter table public.organizations
   add column if not exists address text not null default '',
   add column if not exists tax_id text not null default '',
@@ -273,5 +275,6 @@ create index if not exists subscriber_services_status_idx
   on public.subscriber_services (organization_id, status);
 create index if not exists payments_received_at_idx
   on public.payments (organization_id, received_at desc);
-
-commit;
+end if;
+end;
+$compatibility$;

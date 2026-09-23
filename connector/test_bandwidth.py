@@ -74,6 +74,7 @@ class BandwidthTests(unittest.TestCase):
             api = Router(); setattr(api, mode, True)
             result = apply_job(api, job(), lambda x: None)
             self.assertEqual(result["status"], "uncertain")
+            self.assertEqual(result["code"], "write_outcome_unknown")
             self.assertEqual(api.writes, 1)
 
     def test_ack_retry_never_replays_write(self):

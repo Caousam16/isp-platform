@@ -1,3 +1,5 @@
+import datetime
+import random
 #!/usr/bin/env python3
 """RouterOS 6.43+ API-SSL collector with opt-in bandwidth writes. Python 3.10+, stdlib only."""
 import argparse
@@ -154,7 +156,7 @@ def collect(config, progress=lambda stage: None):
             } for row in lease_rows]
             if len(dhcp_leases) > 2000:
                 raise ProtocolError("More than 2000 DHCP leases; narrow test scope")
-            return {"identity": identity[0].get("name", ""), "version": resource[0].get("version", ""),
+            return {"collectedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"), "identity": identity[0].get("name", ""), "version": resource[0].get("version", ""),
                     "uptime": resource[0].get("uptime", ""), "queues": queues, "dhcpLeases": dhcp_leases}
 
 
@@ -177,7 +179,7 @@ def write_session(config):
 
 def post(config, endpoint, body):
     payload = json.dumps(body).encode("utf-8")
-    if len(payload) > 1_000_000:
+    if len(payload) > (4_000_000 if endpoint == "telemetry" else 65_536):
         raise ProtocolError("Payload exceeds upload limit")
     request = urllib.request.Request(config["app_url"].rstrip("/") + "/api/mikrotik/" + endpoint,
         data=payload, headers={"Authorization": "Bearer " + config["connector_token"], "Content-Type": "application/json"})
@@ -223,9 +225,12 @@ def load_config(path, local_only):
     port = config.get("router_port", 8729)
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError("Invalid router port")
-    interval = config.get("interval_seconds", 60)
+    interval = config.get("interval_seconds", 120)
     if type(interval) is not int or not 30 <= interval <= 3600:
         raise ValueError("Interval must be 30–3600 seconds")
+    command_interval = config.get("command_interval_seconds", 10)
+    if type(command_interval) is not int or not 5 <= command_interval <= 60:
+        raise ValueError("Command interval must be 5–60 seconds")
     ca = Path(config["ca_file"])
     if not ca.is_absolute():
         config["ca_file"] = str(Path(path).resolve().parent / ca)
@@ -279,7 +284,7 @@ def main():
         return 1
     writer_lock = None
     state_path = str(Path(args.config).resolve()) + ".result.json"
-    if config.get("enable_writes") and not args.local_only:
+    if not args.local_only:
         try:
             writer_lock = lock_writer(str(Path(args.config).resolve()) + ".lock")
         except OSError:
@@ -292,26 +297,39 @@ def main():
         if args.diagnose:
             print("[check] " + stage, flush=True)
 
+    next_snapshot = 0
+    failures = 0
     while True:
         success = False
         try:
-            snapshot = collect(config, progress)
-            if not args.local_only:
-                progress("Uploading snapshot to Vercel")
-                publish(config, snapshot)
-                if config.get("enable_writes"):
-                    progress("Processing one bandwidth command")
-                    process_one(config, write_session, post, state_path)
-                    progress("Refreshing snapshot after command processing")
+            if not args.local_only and config.get("enable_writes") and Path(state_path).exists():
+                progress("Acknowledging saved command result")
+                process_one(config, write_session, post, state_path)
+            if args.local_only or time.monotonic() >= next_snapshot:
+                snapshot = collect(config, progress)
+                if not args.local_only:
+                    progress("Uploading snapshot")
+                    publish(config, snapshot)
+                next_snapshot = time.monotonic() + config.get("interval_seconds", 120)
+                print(f"Snapshot collected: {len(snapshot['queues'])} queues, {len(snapshot['dhcpLeases'])} DHCP leases", flush=True)
+            if not args.local_only and config.get("enable_writes"):
+                progress("Processing one bandwidth command")
+                wrote = process_one(config, write_session, post, state_path)
+                if wrote:
                     snapshot = collect(config, progress)
                     publish(config, snapshot)
-            print(f"{'Local API-SSL check passed' if args.local_only else 'Snapshot uploaded'}: {len(snapshot['queues'])} queues", flush=True)
+                    next_snapshot = time.monotonic() + config.get("interval_seconds", 120)
             success = True
+            failures = 0
         except (OSError, ValueError, ProtocolError) as error:
-            print(f"Failed at: {stage}. {describe_error(error)}", file=sys.stderr)
+            failures = min(failures + 1, 6)
+            print(stage + ": " + describe_error(error), file=sys.stderr, flush=True)
         if args.once or args.local_only:
             return 0 if success else 1
-        time.sleep(config.get("interval_seconds", 60))
+        delay = config.get("command_interval_seconds", 10) if config.get("enable_writes") else max(1, next_snapshot-time.monotonic())
+        if failures:
+            delay = min(120, 5 * (2 ** failures))
+        time.sleep(delay + random.uniform(0, 2))
 
 
 if __name__ == "__main__":

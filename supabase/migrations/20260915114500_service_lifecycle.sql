@@ -1,5 +1,7 @@
-begin;
-
+-- Compatibility guard for overlapping historical migrations.
+do $compatibility$
+begin
+if to_regprocedure('public.manage_subscriber_service(uuid,text,uuid)') is null then
 alter table public.subscriber_services
   add column activated_at timestamptz,
   add column suspended_at timestamptz,
@@ -108,5 +110,6 @@ revoke all on function app_private.audit_service_change() from public;
 create trigger subscriber_services_change_audit
   after update on public.subscriber_services
   for each row execute function app_private.audit_service_change();
-
-commit;
+end if;
+end;
+$compatibility$;

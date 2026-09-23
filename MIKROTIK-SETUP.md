@@ -1,12 +1,14 @@
+> Production hardening release: follow [DEPLOYMENT.md](DEPLOYMENT.md) first for migration order, three-router scoping, 120-second snapshots, six-minute freshness and command recovery. The single-router examples below remain useful for API-SSL setup.
+
 # MikroTik API-SSL: Vercel + RouterOS 6.49.19
 
 This first integration reads identity, version, uptime, simple queues and queue trees.
 The admin page is `/admin/routers`. Queue writes are opt-in; see `MIKROTIK-WRITES.md` for the later write upgrade.
-It does not provision subscribers or enforce suspension. Existing service actions remain database-only.
+It does not create router subscribers. The existing optional writer enforces suspension through simple-queue rates. Mapped service actions atomically enqueue simple-queue changes; unmapped services remain database-only.
 
 Run the included Python connector on a PC, Raspberry Pi or VM on the router LAN.
 It reads the router over API-SSL and uploads a snapshot over HTTPS to Vercel every
-60 seconds. Both connections originate from the connector; no WAN port forwarding
+120 seconds. Both connections originate from the connector; no WAN port forwarding
 or public router IP is needed. RouterOS 6 cannot run this Python program itself.
 Use Python 3.10+; no third-party Python packages are required. Keep the host awake.
 
@@ -116,8 +118,8 @@ python3 connector/mikrotik_connector.py --config connector/config.json
 ```
 
 Use an OS service manager for unattended operation. Stop with Ctrl+C.
-The default interval is 60 seconds; refresh the admin page manually. Data is marked
-stale after three minutes. Failed collection/upload leaves the last snapshot with its
+The default interval is 120 seconds; refresh the admin page manually. Data is marked
+stale after six minutes. Failed collection/upload leaves the last snapshot with its
 original timestamp; a recent snapshot does not guarantee current router availability.
 Rotate/remove the Vercel token hash and redeploy to revoke uploads.
 
