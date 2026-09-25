@@ -73,6 +73,8 @@ npm start
 
 ## Three routers with 1,000 subscribers each
 
+For a focused Router 2 and Router 3 checklist and ready-to-copy connector templates, see [ROUTERS-2-3-SETUP.md](ROUTERS-2-3-SETUP.md).
+
 Use automatic snapshots for all three routers. Run one connector process/config per router, with unique credentials, token, CA certificate path and result checkpoint. Start the processes at different times to spread work. The dashboard reads stored snapshots; refreshing a page does not initiate a full router read.
 
 Copy `connector/config.example.json` to `connector/config.router-1.json` and equivalent files for the other routers. Keep your existing API-SSL certificate verification and firewall setup from `MIKROTIK-SETUP.md`. No public RouterOS API exposure is needed.

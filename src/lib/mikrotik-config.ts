@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { validConnectorToken } from "./mikrotik.ts";
 export const routerKeySchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
-const scope = z.object({routerKey:routerKeySchema, organizationId:z.uuid(), tokenSha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
+const scope = z.object({routerKey:routerKeySchema, organizationId:z.uuid(), tokenSha256:z.string().regex(/^[a-f0-9]{64}$/), displayName:z.string().trim().min(1).max(80).optional()}).strict();
 export function configuredRouters(env: Record<string,string|undefined> = process.env) {
  if (env.MIKROTIK_ROUTERS_JSON?.trim()) {
   const scopes=z.array(scope).min(1).max(32).parse(JSON.parse(env.MIKROTIK_ROUTERS_JSON));
